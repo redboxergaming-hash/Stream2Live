@@ -1,0 +1,16 @@
+export const APP_CONFIG = {
+  delayPresets: [5, 10, 15, 20],
+  quickNudges: [-1, -0.5, -0.25, 0.25, 0.5, 1],
+  defaultBaseDelaySeconds: 15,
+  minDelaySeconds: 2,
+  maxDelaySeconds: 120,
+  maxLiveOffsetSeconds: 2,
+  largeAdjustmentThresholdSeconds: 1.5,
+  targetToleranceSeconds: 0.03,
+  maxCorrectionRateDelta: 0.04,
+  correctionRatePerSecondError: 0.035,
+  defaultVolume: 1,
+  diagnosticsLimit: 200,
+  maxBufferSeconds: 150,
+  initialHeadroomSeconds: 6,
+};

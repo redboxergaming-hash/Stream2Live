@@ -1,0 +1,3 @@
+.hero-badge-wrap { display: flex; align-items: start; }
+.diagnostics-shell { padding: var(--space-4) var(--space-5); }
+.disclosure-btn { width: 100%; text-align: left; }
