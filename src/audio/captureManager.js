@@ -1,4 +1,4 @@
-import { loadCaptureWorklet } from './workletLoader.js';
+import { loadCaptureProcessor } from './audioWorkletBridge.js';
 
 const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
 
@@ -10,41 +10,36 @@ export class CaptureManager {
     this.stream = null;
     this.audioContext = null;
     this.sourceNode = null;
-    this.workletNode = null;
-    this.fallbackProcessor = null;
+    this.captureNode = null;
     this.silentGain = null;
   }
 
   async start() {
     this.stream = await navigator.mediaDevices.getDisplayMedia({
       video: true,
-      audio: {
-        echoCancellation: false,
-        noiseSuppression: false,
-        autoGainControl: false,
-      },
+      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
     });
 
     const audioTracks = this.stream.getAudioTracks();
     this.onTrackInfo({
+      active: true,
       audioTrackCount: audioTracks.length,
       hasAudioTrack: audioTracks.length > 0,
-      trackLabel: audioTracks[0]?.label ?? '',
     });
 
     if (!audioTracks.length) {
-      throw new Error('The selected source did not expose an audio track. Choose a browser tab/window and enable audio sharing.');
+      throw new Error('No audio was detected from the selected tab. Re-open capture and make sure tab audio sharing is enabled.');
     }
 
-    audioTracks.forEach((track) => {
-      track.addEventListener('ended', () => this.onEnded?.());
-    });
+    audioTracks.forEach((track) => track.addEventListener('ended', () => this.onEnded?.()));
 
     this.audioContext = new AudioContextCtor({ latencyHint: 'interactive' });
     await this.audioContext.resume();
+    await loadCaptureProcessor(this.audioContext);
 
     const settings = audioTracks[0].getSettings?.() ?? {};
     this.onTrackInfo({
+      active: true,
       audioTrackCount: audioTracks.length,
       hasAudioTrack: true,
       sampleRate: settings.sampleRate ?? this.audioContext.sampleRate,
@@ -52,34 +47,20 @@ export class CaptureManager {
     });
 
     this.sourceNode = this.audioContext.createMediaStreamSource(this.stream);
+    this.captureNode = new AudioWorkletNode(this.audioContext, 'capture-processor');
+    this.captureNode.port.onmessage = (event) => {
+      if (event.data?.type === 'chunk') {
+        this.onChunk(event.data.channels, event.data.peak);
+      }
+    };
     this.silentGain = this.audioContext.createGain();
     this.silentGain.gain.value = 0;
     this.silentGain.connect(this.audioContext.destination);
-
-    if (this.audioContext.audioWorklet) {
-      await loadCaptureWorklet(this.audioContext);
-      this.workletNode = new AudioWorkletNode(this.audioContext, 'capture-processor');
-      this.workletNode.port.onmessage = (event) => this.onChunk(event.data.channels);
-      this.sourceNode.connect(this.workletNode).connect(this.silentGain);
-      return { strategy: 'audio-worklet' };
-    }
-
-    const processor = this.audioContext.createScriptProcessor(2048, 2, 2);
-    processor.onaudioprocess = (event) => {
-      const { inputBuffer } = event;
-      const channels = Array.from({ length: inputBuffer.numberOfChannels }, (_, index) =>
-        new Float32Array(inputBuffer.getChannelData(index)),
-      );
-      this.onChunk(channels);
-    };
-    this.fallbackProcessor = processor;
-    this.sourceNode.connect(processor).connect(this.silentGain);
-    return { strategy: 'script-processor-fallback' };
+    this.sourceNode.connect(this.captureNode).connect(this.silentGain);
   }
 
   async stop() {
-    this.workletNode?.disconnect();
-    this.fallbackProcessor?.disconnect();
+    this.captureNode?.disconnect();
     this.sourceNode?.disconnect();
     this.silentGain?.disconnect();
     this.stream?.getTracks().forEach((track) => track.stop());
@@ -89,8 +70,7 @@ export class CaptureManager {
     this.stream = null;
     this.audioContext = null;
     this.sourceNode = null;
-    this.workletNode = null;
-    this.fallbackProcessor = null;
+    this.captureNode = null;
     this.silentGain = null;
   }
 }

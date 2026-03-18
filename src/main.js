@@ -1,6 +1,8 @@
+import './styles/tokens.css';
 import './styles/base.css';
 import './styles/layout.css';
 import './styles/components.css';
-import { createApp } from './app.js';
+import './styles/utilities.css';
+import { createAppController } from './app/appController.js';
 
-createApp(document.querySelector('#app'));
+createAppController(document.querySelector('#app'));

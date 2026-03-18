@@ -1,9 +1,8 @@
-const STORAGE_KEY = 'live-audio-delay-capture:settings';
+const STORAGE_KEY = 'stream2live:v2-settings';
 
 export function loadSettings() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : {};
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
   } catch {
     return {};
   }
@@ -13,6 +12,6 @@ export function saveSettings(settings) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
   } catch {
-    // Ignore storage failures in private mode or locked-down environments.
+    // Ignore persistence failures.
   }
 }
