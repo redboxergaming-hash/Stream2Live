@@ -1,0 +1,15 @@
+export const APP_CONFIG = {
+  delayPresets: [5, 10, 15, 20],
+  defaultDelaySeconds: 10,
+  defaultCustomDelaySeconds: 12,
+  minDelaySeconds: 2,
+  maxDelaySeconds: 120,
+  defaultVolume: 1,
+  scheduleChunkSeconds: 0.25,
+  scheduleLookAheadSeconds: 0.6,
+  schedulerTickMs: 100,
+  inputWorkletBufferFrames: 2048,
+  ringBufferHeadroomSeconds: 4,
+  diagnosticsLimit: 200,
+  meterSmoothing: 0.85,
+};
